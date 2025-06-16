@@ -44,7 +44,7 @@ set(INSTANTIATION_GENERATION_DIR
     ${CMAKE_CURRENT_BINARY_DIR}/cutlass_instantiations)
 
 execute_process(
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/
+  WORKING_DIRECTORY ${GENERATE_KERNELS_SCRIPT_DIR}
   COMMAND
     ${Python3_EXECUTABLE} generate_kernels.py -a
     "${CMAKE_CUDA_ARCHITECTURES_ORIG};${CMAKE_CUDA_ARCHITECTURES_NATIVE}" -o
@@ -55,23 +55,30 @@ execute_process(
 if(NOT _KERNEL_GEN_SUCCESS MATCHES 0)
   message(
     FATAL_ERROR
-      "Failed to generate CUTLASS kernel instantiations due to ${_KERNEL_GEN_SUCCESS}."
+      "Failed to generate internal CUTLASS kernel instantiations due to ${_KERNEL_GEN_SUCCESS}."
   )
 endif()
 
 file(GLOB_RECURSE INSTANTIATIONS_GENERATED ${INSTANTIATION_GENERATION_DIR}/*.cu)
+
 string(STRIP "${_KERNEL_GEN_OUTPUT}" _KERNEL_GEN_OUTPUT)
 
-# for some reason _KERNEL_GEN_OUTPUT is empty, so have to drop this stale check
-# code # Sort both lists to ensure order doesn't matter list(SORT
-# _KERNEL_GEN_OUTPUT) list(SORT INSTANTIATIONS_GENERATED)
+# Sort both lists to ensure order doesn't matter
+list(SORT _KERNEL_GEN_OUTPUT)
+list(SORT INSTANTIATIONS_GENERATED)
 
-# # Compare the lists if(NOT _KERNEL_GEN_OUTPUT STREQUAL
-# INSTANTIATIONS_GENERATED) list(REMOVE_ITEM INSTANTIATIONS_GENERATED
-# ${_KERNEL_GEN_OUTPUT}) message( WARNING "There exist stale generated kernels
-# in ${INSTANTIATION_GENERATION_DIR}. Removing these
-# files:\n${INSTANTIATIONS_GENERATED}" ) file(REMOVE
-# ${INSTANTIATIONS_GENERATED}) endif()
+# Compare the lists
+if(NOT _KERNEL_GEN_OUTPUT STREQUAL INSTANTIATIONS_GENERATED)
+  list(REMOVE_ITEM INSTANTIATIONS_GENERATED ${_KERNEL_GEN_OUTPUT})
+  message(
+    WARNING
+      "There exist stale generated kernels in ${INSTANTIATION_GENERATION_DIR}. Removing these files:\n${INSTANTIATIONS_GENERATED}"
+  )
+  file(REMOVE ${INSTANTIATIONS_GENERATED})
+endif()
+
+file(GLOB_RECURSE INSTANTIATIONS_GENERATED ${INSTANTIATION_GENERATION_DIR}/*.cu)
+string(STRIP "${_KERNEL_GEN_OUTPUT}" _KERNEL_GEN_OUTPUT)
 
 # Get the sources for Mixed Input GEMM launchers
 file(GLOB_RECURSE MIXED_CU_INSTANTIATIONS
